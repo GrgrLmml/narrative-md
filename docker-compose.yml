@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  narrative-ui:
+    image: narrative-ui:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    restart: always
+    volumes:
+      - ./src/frontend:/app/frontend/
+    ports:
+      - "8080:8080"
+    environment:
+      - OPEN_AI_API_KEY=${OPEN_AI_API_KEY}
+
+  narrative-api:
+    image: narrative-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: always
+    volumes:
+      - ./src/api:/app/src/api/
+    ports:
+      - "3000:3000"
+    environment:
+      - OPEN_AI_API_KEY=${OPEN_AI_API_KEY}
+      - POSTGRES_HOST=narrative_db
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+
+  narrative_db:
+    image: ankane/pgvector
+    restart: always
+    ports:
+      - "5432:5432" # Expose the port to the host machine for debugging
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+    volumes:
+      - db_volume:/var/lib/postgresql/data
+
+
+volumes:
+  db_volume:
