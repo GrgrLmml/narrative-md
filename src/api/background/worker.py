@@ -47,7 +47,7 @@ async def process_segments_job(project_id: int, db: Database, scheduler: AsyncIO
         logger.info(f"Answering question {a}")
     await db.executemany(query3, [(a.answer, project_id, a.id) for a in answers])
 
-    query4 = """
-    UPDATE segments SET processed = true WHERE id = $1
-    """
-    await db.executemany(query4, [(s.id,) for s in segments])
+    # query4 = """
+    # UPDATE segments SET processed = true WHERE id = $1
+    # """
+    # await db.executemany(query4, [(s.id,) for s in segments])

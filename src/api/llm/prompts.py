@@ -51,6 +51,7 @@ Read the transcript carefully and provide the appropriate answers for each quest
 
 
 Respond in a proper JSON format, adhering to the structure of the provided questionnaire. Be extra careful with the ID and the 'answer' field.
+Make sure that all values (answers) are strings. This means even if the answer is a number, it should be enclosed in double quotes. Same goes for boolean values and lists.
 
 If you don't provide a proper json very bad things might happen.
 """

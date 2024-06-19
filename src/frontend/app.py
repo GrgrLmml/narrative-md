@@ -64,7 +64,7 @@ def render_screen():
     st.title("narrative-md demo")
 
     if st.session_state.get("project") is None:
-        project = st.text_input("Enter project name")
+        project = st.text_input("Enter the patient's name")
         questions = st.text_area(label="Sample questions (feel free to modify)",
                                  value="""What is your reason for coming today? (open question)
     Do you smoke yes/no? (boolean)
