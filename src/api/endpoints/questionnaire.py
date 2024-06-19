@@ -78,6 +78,5 @@ async def answers(project_id: int, db: Database = Depends(get_db)) -> Any:
     SELECT question,answer,project_id FROM questions
     WHERE project_id = $1
     """
-    answers = await db.fetch_all(query, project_id)
-    answers = [Answer(**q) for q in answers]
-    return answers
+    resp = await db.fetch_all(query, project_id)
+    return [Answer(**q) for q in resp]
