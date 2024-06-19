@@ -17,3 +17,8 @@ class Question(BaseModel):
 
 class Questionnaire(BaseModel):
     questions: List[Question]
+
+
+class Segment(BaseModel):
+    segment: str
+    project_id: int

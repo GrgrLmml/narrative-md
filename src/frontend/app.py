@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import io
 import tempfile
 import numpy as np
@@ -8,7 +9,8 @@ from pydub import AudioSegment
 from openai import OpenAI
 
 from config.config import OPEN_AI_API_KEY, logger
-from utils.calls import new_questionnaire
+from utils.models import NewProjectResponse
+from utils.calls import new_questionnaire, new_segment
 
 
 # Global variables to store samples and accumulated time
@@ -21,7 +23,7 @@ prev_segment = 'There is no previous segment.'
 client = OpenAI(api_key=OPEN_AI_API_KEY)
 
 
-def audio_callback(audio_frame):
+def audio_callback(project_id, audio_frame):
     global samples, accumulated_time, prev_segment
 
     # Convert the audio frame to an ndarray and ensure it's the right type
@@ -53,6 +55,7 @@ def audio_callback(audio_frame):
             )
             prev_segment = transcription.text
             logger.info(f"Transcription: {prev_segment}")
+            new_segment({"project_id": project_id, "segment": prev_segment})
 
         samples = samples[-samples_to_retain:]
         accumulated_time = OVERLAP_TIME
@@ -73,14 +76,20 @@ def render_screen():
     How tall are you? (number)""", height=200)
         click = st.button("Start", disabled=st.session_state.get("project", "") != "")
         if click:
+            if project == "":
+                st.error("Project name cannot be empty")
+                return
             st.session_state.project = project
-            asyncio.run(new_questionnaire({"name": project, "questions": questions}))
+            project_resp: NewProjectResponse = asyncio.run(new_questionnaire({"name": project, "questions": questions}))
+            st.session_state.project_id = project_resp.project_id
             st.rerun()
     else:
         project = st.session_state.project
-        st.markdown(f"Project: {project}")
+        project_id = st.session_state.project_id
+        st.markdown(f"Project: {project} (ID: {project_id})")
+        callback_with_project_id = functools.partial(audio_callback, project_id)
         webrtc_streamer(key="sample", mode=WebRtcMode.SENDONLY, sendback_video=False, sendback_audio=True,
-                        audio_frame_callback=audio_callback, media_stream_constraints={
+                        audio_frame_callback=callback_with_project_id, media_stream_constraints={
                 "audio": True,
                 "video": False
             })

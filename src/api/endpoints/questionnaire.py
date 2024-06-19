@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from api.config.config import logger
 from api.db.postgres_engine import Database, get_db
-from api.endpoints.models import OnboardProject, Questionnaire
+from api.endpoints.models import OnboardProject, Questionnaire, Segment
 from api.llm.openai import questionnaire
 
 router = APIRouter(prefix="/questionnaire", tags=["questionnaire"])
@@ -48,4 +48,16 @@ async def create_questionnaire(request: OnboardProject, db: Database = Depends(g
         logger.error(f"Failed to create or update questionnaire for project {request.name}: {e}")
         raise HTTPException(status_code=400, detail="Error updating or inserting the project.") from e
 
-    return {"message": "Questionnaire created successfully!"}
+    return {"project_id": project_id}
+
+
+@router.post("/segment")
+async def segment(request: Segment, db: Database = Depends(get_db)) -> Any:
+
+    query = """
+    INSERT INTO segments (project_id, segment)
+    VALUES ($1, $2)
+    """
+    await db.execute(query, request.project_id, request.segment)
+    logger.info(f"""Received segment "{request.segment}" for project {request.project_id}""")
+    return {"success": True}
