@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from fastapi import FastAPI, Request
 
 from api.config.config import logger
 from api.db.postgres_engine import (
@@ -17,6 +18,7 @@ def app_factory() -> FastAPI:
 app = app_factory()
 
 
+
 @app.on_event("startup")  # type: ignore[unused-ignore]
 async def startup_event() -> None:
     await app_startup(app)
@@ -27,13 +29,19 @@ async def shutdown_event() -> None:
     await app_shutdown(app)
 
 
+
 async def app_startup(app: FastAPI) -> None:
     logger.info("Starting up application")
     logger.info("Loading database")
     app.state.db = Database(connection_string(), min_size=5, max_size=200)
     await app.state.db.connect()
+    scheduler = AsyncIOScheduler()
+    scheduler.start()
+    app.state.scheduler = scheduler
     logger.info("Application is ready")
 
 
 async def app_shutdown(app: FastAPI) -> None:
-    pass
+    app.state.scheduler.shutdown()
+
+

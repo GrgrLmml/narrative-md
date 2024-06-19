@@ -15,10 +15,18 @@ class Question(BaseModel):
     options: Optional[List[str]] = None
 
 
+class Answer(BaseModel):
+    question: str
+    answer: str
+    project_id: int
+
+
 class Questionnaire(BaseModel):
     questions: List[Question]
 
 
 class Segment(BaseModel):
+    id: Optional[int] = None
     segment: str
     project_id: int
+    processed: Optional[bool] = False

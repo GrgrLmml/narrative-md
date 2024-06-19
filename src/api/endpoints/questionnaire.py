@@ -1,18 +1,26 @@
 import json
 from typing import Any
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from api.background.worker import process_segments_job
 from api.config.config import logger
 from api.db.postgres_engine import Database, get_db
-from api.endpoints.models import OnboardProject, Questionnaire, Segment
+from api.endpoints.models import OnboardProject, Questionnaire, Segment, Question, Answer
 from api.llm.openai import questionnaire
 
 router = APIRouter(prefix="/questionnaire", tags=["questionnaire"])
 
 
+def get_scheduler(request: Request) -> Database:
+    logger.debug("Getting scheduler")
+    return request.app.state.scheduler  # type: ignore[unused-ignore, no-any-return]
+
+
 @router.post("/new")
-async def create_questionnaire(request: OnboardProject, db: Database = Depends(get_db)) -> Any:
+async def create_questionnaire(request: OnboardProject, db: Database = Depends(get_db),
+                               scheduler: AsyncIOScheduler = Depends(get_scheduler)) -> Any:
     logger.info(f"Creating new questionnaire for project {request.name}")
     try:
         query = """
@@ -42,6 +50,8 @@ async def create_questionnaire(request: OnboardProject, db: Database = Depends(g
         """
         await db.execute("DELETE FROM questions WHERE project_id = $1", project_id)
         await db.executemany(query2, values_to_insert)
+        scheduler.add_job(process_segments_job, args=[project_id, db, scheduler], trigger='interval', seconds=10,
+                          id=str(project_id), max_instances=1)
         logger.info(
             f"Questionnaire for project {request.name} and id {project_id} successfully created or updated. Number of questions: {len(q.questions)}")
     except Exception as e:
@@ -53,7 +63,6 @@ async def create_questionnaire(request: OnboardProject, db: Database = Depends(g
 
 @router.post("/segment")
 async def segment(request: Segment, db: Database = Depends(get_db)) -> Any:
-
     query = """
     INSERT INTO segments (project_id, segment)
     VALUES ($1, $2)
@@ -61,3 +70,14 @@ async def segment(request: Segment, db: Database = Depends(get_db)) -> Any:
     await db.execute(query, request.project_id, request.segment)
     logger.info(f"""Received segment "{request.segment}" for project {request.project_id}""")
     return {"success": True}
+
+
+@router.get("/answers/{project_id}", response_model=Any)
+async def answers(project_id: int, db: Database = Depends(get_db)) -> Any:
+    query = """
+    SELECT question,answer,project_id FROM questions
+    WHERE project_id = $1
+    """
+    answers = await db.fetch_all(query, project_id)
+    answers = [Answer(**q) for q in answers]
+    return answers

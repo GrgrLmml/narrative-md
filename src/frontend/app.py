@@ -10,8 +10,7 @@ from openai import OpenAI
 
 from config.config import OPEN_AI_API_KEY, logger
 from utils.models import NewProjectResponse
-from utils.calls import new_questionnaire, new_segment
-
+from utils.calls import new_questionnaire, new_segment, answers
 
 # Global variables to store samples and accumulated time
 samples = np.array([], dtype=np.int16)
@@ -93,7 +92,8 @@ def render_screen():
                 "audio": True,
                 "video": False
             })
-
+        questionnaire = asyncio.run(answers(project_id))
+        st.dataframe(questionnaire)
     # st.write(st.session_state.num_frames)
 
 
